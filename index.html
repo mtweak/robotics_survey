@@ -44,6 +44,169 @@
     }
     #stats-box .stat-label { color: #666; }
     #stats-box .stat-value { font-weight: bold; }
+
+    /* Widgets Panel */
+    #widgets-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 340px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      background: rgba(255,255,255,0.97);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      z-index: 1;
+      font-size: 13px;
+    }
+    .widget {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .widget:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .widget-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #1f2937;
+    }
+    .widget-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 8px 0;
+    }
+    .widget-subtitle {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    .value-red { color: #dc2626; }
+    .value-yellow { color: #ca8a04; }
+    .value-green { color: #16a34a; }
+
+    /* Progress bar */
+    .progress-container {
+      width: 100%;
+      height: 24px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      margin: 8px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .progress-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      font-weight: 600;
+      color: #1f2937;
+      z-index: 1;
+    }
+
+    /* Bar chart */
+    .bar-chart {
+      margin-top: 8px;
+    }
+    .bar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+    }
+    .bar-label {
+      width: 100px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #374151;
+    }
+    .bar-visual {
+      flex: 1;
+      height: 20px;
+      background: #e5e7eb;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .bar-count {
+      width: 30px;
+      text-align: right;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Donut chart */
+    .donut-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .donut-chart {
+      width: 80px;
+      height: 80px;
+      position: relative;
+    }
+    .donut-legend {
+      flex: 1;
+    }
+    .legend-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+      font-size: 11px;
+    }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    /* Traffic lights */
+    .traffic-lights {
+      margin-top: 8px;
+    }
+    .traffic-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f9fafb;
+    }
+    .traffic-light {
+      font-size: 20px;
+    }
+    .traffic-details {
+      flex: 1;
+    }
+    .traffic-program {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .traffic-stats {
+      font-size: 10px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
@@ -61,13 +224,146 @@
 
     <div>
       <div><b>Clusters</b></div>
-      <input type="number" id="cluster-count" min="1" max="20" value="5" style="width:50px;padding:4px">
+      <input type="number" id="cluster-count" min="1" max="20" value="2" style="width:50px;padding:4px">
       <button id="run-clusters" style="padding:4px 8px">Show Clusters</button>
       <button id="clear-clusters" style="padding:4px 8px">Clear</button>
     </div>
   </div>
 
   <div id="map">
+    <div id="widgets-panel" style="display:none">
+      <!-- Widget 1: Overall Feasibility -->
+      <div class="widget" id="widget-burnout">
+        <div class="widget-title">⚠️ Overall Feasibility</div>
+        <div class="widget-value" id="burnout-value">-</div>
+        <div class="widget-subtitle">Lead surplus/deficit (4 kids per team)</div>
+
+        <div class="progress-container" style="margin-top:12px">
+          <div class="progress-bar" id="burnout-bar"
+               style="background: linear-gradient(90deg, #dc2626 0%, #fca5a5 100%)"></div>
+          <div class="progress-label" id="burnout-label">-</div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px">
+          <span style="color:#16a34a">Capacity: <b id="burnout-capacity">-</b></span>
+          <span style="color:#dc2626">Demand: <b id="burnout-demand">-</b></span>
+        </div>
+      </div>
+
+      <!-- Widget 2: Hidden Generals -->
+      <div class="widget" id="widget-generals">
+        <div class="widget-title">🎖️ Hidden Generals</div>
+        <div class="widget-value" id="generals-value">-</div>
+        <div class="widget-subtitle">Tech-skilled volunteers available to recruit</div>
+      </div>
+
+      <!-- Widget 3: Twin Engines Balance -->
+      <div class="widget" id="widget-balance">
+        <div class="widget-title">⚖️ Twin Engines Balance</div>
+        <div class="widget-subtitle">Regional Lead Distribution</div>
+
+        <div class="bar-chart" id="balance-chart">
+          <div class="bar-item">
+            <div class="bar-label">Troy Hub</div>
+            <div class="bar-visual">
+              <div class="bar-fill" id="balance-east-bar" style="background:#16a34a"></div>
+            </div>
+            <div class="bar-count" id="balance-east-count">-</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-label">Southfield Hub</div>
+            <div class="bar-visual">
+              <div class="bar-fill" id="balance-west-bar" style="background:#ca8a04"></div>
+            </div>
+            <div class="bar-count" id="balance-west-count">-</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-label">Canton Hub</div>
+            <div class="bar-visual">
+              <div class="bar-fill" id="balance-south-bar" style="background:#dc2626"></div>
+            </div>
+            <div class="bar-count" id="balance-south-count">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Widget 4: Orphan Count -->
+      <div class="widget" id="widget-orphan">
+        <div class="widget-title">🚦 Program Feasibility</div>
+        <div class="widget-subtitle">Students without adequate mentors</div>
+
+        <div class="traffic-lights">
+          <div class="traffic-item">
+            <div class="traffic-light">🟢</div>
+            <div class="traffic-details">
+              <div class="traffic-program">FLL Explore (6-8)</div>
+              <div class="traffic-stats"><span id="orphan-explore-students">-</span> students</div>
+            </div>
+          </div>
+
+          <div class="traffic-item">
+            <div class="traffic-light" id="orphan-challenge-light">🟡</div>
+            <div class="traffic-details">
+              <div class="traffic-program">FLL Challenge (9-12)</div>
+              <div class="traffic-stats">
+                <span id="orphan-challenge-students">-</span> students,
+                <span id="orphan-challenge-leads">-</span> leads
+                (ratio: <span id="orphan-challenge-ratio">-</span>:1)
+              </div>
+            </div>
+          </div>
+
+          <div class="traffic-item">
+            <div class="traffic-light" id="orphan-ftc-light">🔴</div>
+            <div class="traffic-details">
+              <div class="traffic-program">FTC (13-18)</div>
+              <div class="traffic-stats">
+                <span id="orphan-ftc-students">-</span> students,
+                <span id="orphan-ftc-leads">-</span> FTC-capable leads
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Widget 5: Timings Distribution -->
+      <div class="widget" id="widget-weekend">
+        <div class="widget-title">🌅 Timings Distribution</div>
+        <div class="widget-subtitle">Family availability for meetups</div>
+
+        <div class="bar-chart" id="timings-chart">
+          <div class="bar-item">
+            <div class="bar-label">Weekday PM</div>
+            <div class="bar-visual">
+              <div class="bar-fill" id="timing-weekday-bar" style="background:#f59e0b"></div>
+            </div>
+            <div class="bar-count" id="timing-weekday-count">-</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-label">Weekend AM</div>
+            <div class="bar-visual">
+              <div class="bar-fill" id="timing-weekend-am-bar" style="background:#3b82f6"></div>
+            </div>
+            <div class="bar-count" id="timing-weekend-am-count">-</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-label">Weekend PM</div>
+            <div class="bar-visual">
+              <div class="bar-fill" id="timing-weekend-pm-bar" style="background:#8b5cf6"></div>
+            </div>
+            <div class="bar-count" id="timing-weekend-pm-count">-</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-label">Other</div>
+            <div class="bar-visual">
+              <div class="bar-fill" id="timing-other-bar" style="background:#10b981"></div>
+            </div>
+            <div class="bar-count" id="timing-other-count">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="stats-box" style="display:none">
       <h3>📊 Statistics</h3>
       <div class="stat-row"><span class="stat-label">Zip Codes</span><span class="stat-value" id="stat-zips">-</span></div>
@@ -107,12 +403,37 @@
     if (!text) return [];
     const t = String(text);
     const ages = [];
+
+    // Find all numbers that could be ages
     const re = /\b(\d{1,2})(?:\.(\d))?\b/g;
     let m;
+    const candidates = [];
+
     while ((m = re.exec(t)) !== null) {
       const whole = parseInt(m[1], 10);
-      if (Number.isFinite(whole) && whole >= 1 && whole <= 17) ages.push(whole);
+      if (Number.isFinite(whole) && whole >= 1 && whole <= 17) {
+        candidates.push({ value: whole, index: m.index });
+      }
     }
+
+    // Filter out numbers that are likely counts, not ages
+    for (const candidate of candidates) {
+      const beforeText = t.substring(Math.max(0, candidate.index - 20), candidate.index).toLowerCase();
+      const afterText = t.substring(candidate.index, Math.min(t.length, candidate.index + 30)).toLowerCase();
+
+      // Skip if number appears right before "kids", "children", "family", "household"
+      if (afterText.match(/^\d+\s*(kids|children|child|family|families|household)/)) {
+        continue;
+      }
+
+      // Skip if preceded by "have", "with", "of" (likely a count)
+      if (beforeText.match(/(have|with|of)\s*$/)) {
+        continue;
+      }
+
+      ages.push(candidate.value);
+    }
+
     return ages;
   }
 
@@ -148,6 +469,8 @@
   // ---- Map globals ----
   let map = null;
   let geojson = null;
+  let rawRows = null;        // Store all parsed CSV rows for widget calculations
+  let columnMap = null;      // Store column name mappings for easy access
 
   function initMap(token) {
     mapboxgl.accessToken = token;
@@ -289,8 +612,44 @@
           </div>
         </div>`;
 
+      // Build timing distribution bar graph
+      const timings = JSON.parse(props.timings || '{"weekdayEvenings":0,"weekendMornings":0,"weekendEvenings":0,"other":0}');
+      const maxTiming = Math.max(timings.weekdayEvenings, timings.weekendMornings, timings.weekendEvenings, timings.other, 1);
+
+      const timingGraph = `
+        <div style="margin-top:8px">
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Weekday PM</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#f59e0b;height:100%;width:${(timings.weekdayEvenings/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.weekdayEvenings}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Weekend AM</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#3b82f6;height:100%;width:${(timings.weekendMornings/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.weekendMornings}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Weekend PM</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#8b5cf6;height:100%;width:${(timings.weekendEvenings/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.weekendEvenings}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Other</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#10b981;height:100%;width:${(timings.other/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.other}</span>
+          </div>
+        </div>`;
+
       const html =
-        `<div style="font-size:13px;min-width:160px">
+        `<div style="font-size:13px;min-width:180px">
           <div><b>${props.postcode}</b></div>
           <div>${props.place_name || ""}</div>
           ${leadBadge}
@@ -300,6 +659,8 @@
           <div><b>Kids:</b> ${props.kids}</div>
           <div style="margin-top:4px"><b>Age Distribution:</b></div>
           ${barGraph}
+          <div style="margin-top:8px"><b>Availability:</b></div>
+          ${timingGraph}
         </div>`;
       tooltip.setLngLat(e.lngLat).setHTML(html).addTo(map);
     });
@@ -368,6 +729,19 @@
     if (!colZip) { setStatus("Could not find ZIP column in CSV headers.", "err"); return; }
     if (!colKids) { setStatus("Could not find kids/ages column in CSV headers.", "err"); return; }
 
+    // Store raw rows and column mappings for widget calculations
+    rawRows = rows;
+    columnMap = {
+      zip: colZip,
+      kids: colKids,
+      volunteer: colVolunteer,
+      mosque: Object.keys(rows[0]).find(k => /masjid does your family/i.test(k)),
+      weekendMorning: Object.keys(rows[0]).find(k => /weekend mornings/i.test(k)),
+      weekdayEvenings: Object.keys(rows[0]).find(k => /weekday evenings/i.test(k)),
+      weekendEvenings: Object.keys(rows[0]).find(k => /weekend evenings/i.test(k)),
+      other: Object.keys(rows[0]).find(k => /other/i.test(k) && /free for meetups/i.test(k))
+    };
+
     const agg = new Map();
     let badZip = 0;
 
@@ -379,12 +753,33 @@
       const kids = ages.length;
 
       const key = `${nz.kind}:${nz.code}`;
-      if (!agg.has(key)) agg.set(key, { kind: nz.kind, code: nz.code, households: 0, kids: 0, ages: [] });
+      if (!agg.has(key)) agg.set(key, {
+        kind: nz.kind,
+        code: nz.code,
+        households: 0,
+        kids: 0,
+        ages: [],
+        timings: { weekdayEvenings: 0, weekendMornings: 0, weekendEvenings: 0, other: 0 }
+      });
 
       const a = agg.get(key);
       a.households += 1;
       a.kids += kids;
       a.ages.push(...ages);
+
+      // Track timing availability
+      if ((r[columnMap.weekdayEvenings] || "").toString().toLowerCase() === "true") {
+        a.timings.weekdayEvenings++;
+      }
+      if ((r[columnMap.weekendMorning] || "").toString().toLowerCase() === "true") {
+        a.timings.weekendMornings++;
+      }
+      if ((r[columnMap.weekendEvenings] || "").toString().toLowerCase() === "true") {
+        a.timings.weekendEvenings++;
+      }
+      if ((r[columnMap.other] || "").toString().toLowerCase() === "true") {
+        a.timings.other++;
+      }
 
       // Count volunteer types
       if (colVolunteer) {
@@ -454,7 +849,11 @@
         if (weightMode === "kids_9_12") weight = bucketCount(ages, 9, 12);
         if (weightMode === "kids_13_17") weight = bucketCount(ages, 13, 17);
 
-        const agesSummary = ages.length ? ages.sort((a,b)=>a-b).join(", ") : "";
+        const agesSummary = JSON.stringify({
+          '6-8': bucketCount(ages, 6, 8),
+          '9-12': bucketCount(ages, 9, 12),
+          '13-17': bucketCount(ages, 13, 17)
+        });
         return {
           type: "Feature",
           geometry: { type: "Point", coordinates: [r.lon, r.lat] },
@@ -466,7 +865,8 @@
             kids: r.kids,
             weight: weight,
             ages_summary: agesSummary,
-            leadVolunteerCount: r.leadVolunteerCount || 0
+            leadVolunteerCount: r.leadVolunteerCount || 0,
+            timings: JSON.stringify(r.timings || { weekdayEvenings: 0, weekendMornings: 0, weekendEvenings: 0, other: 0 })
           }
         };
       })
@@ -529,7 +929,128 @@
     document.getElementById('stat-teams').textContent = potentialTeams;
     document.getElementById('stats-box').style.display = 'block';
 
+    // Update widgets panel
+    updateWidgets();
+
     if (failures.length) console.warn("Geocode failures:", failures);
+
+    // Load and display masjids after main data is loaded
+    loadMasjids();
+  }
+
+  // Load and display masjid locations
+  async function loadMasjids() {
+    if (!map) return;
+
+    try {
+      const res = await fetch('masjids.csv');
+      if (!res.ok) {
+        console.warn('Could not load masjids.csv');
+        return;
+      }
+
+      const csvText = await res.text();
+      const rows = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      console.log(`Parsed ${rows.length} masjid rows from CSV`);
+
+      // Geocode masjids and create GeoJSON
+      const masjidFeatures = [];
+      for (const row of rows) {
+        const zipCode = row['Zip Code'];
+        const name = row['Organization Name'];
+        const abbr = row['Abbr.'] === '--' ? '' : row['Abbr.'];
+        const hub = row['Hub Alignment'];
+
+        if (!zipCode) continue;
+
+        try {
+          const geo = await geocodePostcode(zipCode, 'US', MAPBOX_TOKEN);
+          masjidFeatures.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [geo.lon, geo.lat] },
+            properties: {
+              name: name,
+              abbr: abbr,
+              hub: hub,
+              zipCode: zipCode
+            }
+          });
+        } catch (e) {
+          console.warn(`Failed to geocode masjid ${name}:`, e);
+        }
+      }
+
+      if (masjidFeatures.length === 0) return;
+
+      // Add masjid source and layers
+      if (!map.getSource('masjids')) {
+        map.addSource('masjids', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: masjidFeatures }
+        });
+
+        // Masjid markers (circle instead of emoji for reliability)
+        map.addLayer({
+          id: 'masjid-markers',
+          type: 'circle',
+          source: 'masjids',
+          paint: {
+            'circle-radius': 8,
+            'circle-color': '#16a34a',
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 2,
+            'circle-opacity': 0.9
+          }
+        });
+
+        // Masjid labels
+        map.addLayer({
+          id: 'masjid-labels',
+          type: 'symbol',
+          source: 'masjids',
+          layout: {
+            'text-field': ['get', 'abbr'],
+            'text-size': 10,
+            'text-anchor': 'top',
+            'text-offset': [0, 1.2],
+            'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold']
+          },
+          paint: {
+            'text-color': '#065f46',
+            'text-halo-color': '#fff',
+            'text-halo-width': 1.5
+          }
+        });
+
+        // Masjid tooltips
+        const masjidTooltip = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
+
+        map.on('mouseenter', 'masjid-markers', (e) => {
+          map.getCanvas().style.cursor = 'pointer';
+          const f = e.features[0];
+          const props = f.properties;
+
+          masjidTooltip.setLngLat(e.lngLat).setHTML(`
+            <div style="font-size:13px">
+              <div><b>🕌 ${props.name}</b></div>
+              ${props.abbr ? `<div style="color:#6b7280">${props.abbr}</div>` : ''}
+              <hr style="margin:4px 0"/>
+              <div><b>Hub:</b> ${props.hub}</div>
+              <div><b>Zip:</b> ${props.zipCode}</div>
+            </div>
+          `).addTo(map);
+        });
+
+        map.on('mouseleave', 'masjid-markers', () => {
+          map.getCanvas().style.cursor = '';
+          masjidTooltip.remove();
+        });
+      }
+
+      console.log(`Loaded ${masjidFeatures.length} masjid locations`);
+    } catch (e) {
+      console.error('Error loading masjids:', e);
+    }
   }
 
   // Rebuild weights instantly when toggling modes (no re-geocode)
@@ -550,6 +1071,7 @@
         f.properties.weight = weight;
       }
       addOrUpdateLayers();
+      updateWidgets();
       setStatus(`Updated weighting: ${mode}`);
     });
   });
@@ -609,12 +1131,60 @@
     // Build cluster data with convex hulls
     const clusters = centroids.map((c, i) => {
       const clusterPoints = points.filter((_, pi) => assignments[pi] === i);
+
+      // Aggregate age distribution
+      const agesSummary = { '6-8': 0, '9-12': 0, '13-17': 0 };
+      clusterPoints.forEach((p, idx) => {
+        if (p.ages_summary) {
+          try {
+            // Handle both object and string formats
+            const ages = typeof p.ages_summary === 'string'
+              ? JSON.parse(p.ages_summary)
+              : p.ages_summary;
+
+            if (idx === 0) {
+              console.log('First point ages_summary:', p.ages_summary);
+              console.log('Parsed ages:', ages);
+            }
+
+            agesSummary['6-8'] += ages['6-8'] || 0;
+            agesSummary['9-12'] += ages['9-12'] || 0;
+            agesSummary['13-17'] += ages['13-17'] || 0;
+          } catch (e) {
+            console.error('Error parsing ages_summary:', e, p.ages_summary);
+          }
+        }
+      });
+
+      console.log('Cluster', i, 'final agesSummary:', agesSummary);
+
+      // Aggregate timing distribution
+      const timings = { weekdayEvenings: 0, weekendMornings: 0, weekendEvenings: 0, other: 0 };
+      clusterPoints.forEach(p => {
+        if (p.timings) {
+          try {
+            // Handle both object and string formats
+            const t = typeof p.timings === 'string'
+              ? JSON.parse(p.timings)
+              : p.timings;
+            timings.weekdayEvenings += t.weekdayEvenings || 0;
+            timings.weekendMornings += t.weekendMornings || 0;
+            timings.weekendEvenings += t.weekendEvenings || 0;
+            timings.other += t.other || 0;
+          } catch (e) {
+            console.error('Error parsing timings:', e, p.timings);
+          }
+        }
+      });
+
       return {
         center: [c.lon, c.lat],
         points: clusterPoints,
         pointCount: clusterPoints.length,
         totalKids: clusterPoints.reduce((sum, p) => sum + (p.kids || 0), 0),
-        leaders: clusterPoints.reduce((sum, p) => sum + (p.leadVolunteerCount || 0), 0)
+        leaders: clusterPoints.reduce((sum, p) => sum + (p.leadVolunteerCount || 0), 0),
+        agesSummary: JSON.stringify(agesSummary),
+        timings: JSON.stringify(timings)
       };
     });
 
@@ -670,17 +1240,296 @@
 
   const clusterColors = ['#e63946','#2a9d8f','#e9c46a','#264653','#f4a261','#8338ec','#06d6a0','#118ab2','#ef476f','#ffd166'];
 
+  // ---- Widget Calculation Functions ----
+
+  function calculateBurnout() {
+    if (!rawRows) return { deficit: 0, capacity: 0, demand: 0, leadCount: 0 };
+
+    let leadCount = 0;
+    let totalStudents = 0;
+
+    // Debug logging
+    console.log('=== Debugging kid count ===');
+    let debugCount = 0;
+
+    for (const row of rawRows) {
+      const volunteer = (row[columnMap.volunteer] || "").toString().trim().toLowerCase();
+      // Use startsWith for more accurate matching
+      if (volunteer.startsWith("lead volunteer") || volunteer.startsWith("head coach")) {
+        leadCount++;
+      }
+
+      const kidsText = row[columnMap.kids];
+      const ages = extractAges(kidsText);
+      if (ages.length > 0) {
+        debugCount++;
+        if (debugCount <= 10) {
+          console.log(`Row ${debugCount}: "${kidsText}" -> ages:`, ages, `(${ages.length} kids)`);
+        }
+      }
+      totalStudents += ages.length;
+    }
+
+    console.log(`Total rows with kids: ${debugCount}, Total kids counted: ${totalStudents}`);
+    console.log('=========================');
+
+    // FLL team structure: ~4 kids per lead
+    const capacity = leadCount * 4; // Total kids that can be served
+    const deficit = capacity - totalStudents; // Surplus or deficit in kids
+
+    return { deficit, capacity, demand: totalStudents, leadCount };
+  }
+
+  function calculateHiddenGenerals() {
+    if (!rawRows) return 0;
+
+    let count = 0;
+
+    for (const row of rawRows) {
+      const volunteer = (row[columnMap.volunteer] || "").toString().trim().toLowerCase();
+      if (!volunteer.startsWith("general support")) continue;
+
+      // Check interest columns for Technical Mentor or CAD & Design
+      const interestCols = Object.keys(row).filter(k =>
+        /which areas.*interested/i.test(k) &&
+        /(technical mentor|cad.*design)/i.test(k)
+      );
+
+      const hasTechSkill = interestCols.some(col =>
+        (row[col] || "").toLowerCase() === "true"
+      );
+
+      if (hasTechSkill) count++;
+    }
+
+    return count;
+  }
+
+  // Mosque to region mapping
+  const mosqueToRegion = {
+    'iagd': 'East', 'iona': 'East', 'troy': 'East', 'rochester': 'East',
+    'tawheed': 'West', 'mcm': 'West', 'southfield': 'West',
+    'amda': 'South', 'miftaah': 'South', 'canton': 'South',
+    'ann arbor': 'South', 'farmington': 'South'
+  };
+
+  function calculateRegionalBalance() {
+    if (!rawRows) return { East: 0, West: 0, South: 0 };
+
+    const regions = { East: 0, West: 0, South: 0 };
+
+    for (const row of rawRows) {
+      const volunteer = (row[columnMap.volunteer] || "").toString().trim().toLowerCase();
+      if (!volunteer.startsWith("lead volunteer") && !volunteer.startsWith("head coach")) continue;
+
+      const mosque = (row[columnMap.mosque] || "").toLowerCase();
+
+      // Find matching region
+      for (const [key, region] of Object.entries(mosqueToRegion)) {
+        if (mosque.includes(key)) {
+          regions[region]++;
+          break;
+        }
+      }
+    }
+
+    return regions;
+  }
+
+  function getRegionColor(count) {
+    if (count >= 8) return '#16a34a'; // Green
+    if (count >= 4) return '#ca8a04'; // Yellow
+    return '#dc2626'; // Red
+  }
+
+  function calculateOrphanCount() {
+    if (!rawRows) return { explore: {}, challenge: {}, ftc: {} };
+
+    let explore = { students: 0 };
+    let challenge = { students: 0, leads: 0 };
+    let ftc = { students: 0, leads: 0 };
+
+    for (const row of rawRows) {
+      const ages = extractAges(row[columnMap.kids]);
+
+      // Count students by age range
+      explore.students += ages.filter(a => a >= 6 && a <= 8).length;
+      challenge.students += ages.filter(a => a >= 9 && a <= 12).length;
+      ftc.students += ages.filter(a => a >= 13 && a <= 18).length;
+
+      // Count leads
+      const volunteer = (row[columnMap.volunteer] || "").toString().trim().toLowerCase();
+      if (volunteer.startsWith("lead volunteer") || volunteer.startsWith("head coach")) {
+        challenge.leads++;
+
+        // Check for Technical Mentor or CAD & Design interests (FTC-capable)
+        const interestCols = Object.keys(row).filter(k =>
+          /which areas.*interested/i.test(k) &&
+          /(technical mentor|cad.*design)/i.test(k)
+        );
+
+        const isFTCCapable = interestCols.some(col =>
+          (row[col] || "").toLowerCase() === "true"
+        );
+
+        if (isFTCCapable) {
+          ftc.leads++;
+        }
+      }
+    }
+
+    // Calculate ratios and traffic lights
+    challenge.ratio = challenge.leads > 0 ? (challenge.students / challenge.leads).toFixed(1) : '∞';
+    challenge.status = challenge.ratio > 6 ? 'yellow' : 'green';
+
+    explore.status = explore.students >= 20 ? 'green' : 'yellow';
+    ftc.status = ftc.leads >= 3 ? 'green' : 'red';
+
+    return { explore, challenge, ftc };
+  }
+
+  function calculateTimingsDistribution() {
+    if (!rawRows) return { weekdayEvenings: 0, weekendMornings: 0, weekendEvenings: 0, other: 0 };
+
+    let weekdayEvenings = 0;
+    let weekendMornings = 0;
+    let weekendEvenings = 0;
+    let other = 0;
+
+    for (const row of rawRows) {
+      if ((row[columnMap.weekdayEvenings] || "").toLowerCase() === "true") {
+        weekdayEvenings++;
+      }
+      if ((row[columnMap.weekendMorning] || "").toLowerCase() === "true") {
+        weekendMornings++;
+      }
+      if ((row[columnMap.weekendEvenings] || "").toLowerCase() === "true") {
+        weekendEvenings++;
+      }
+      if ((row[columnMap.other] || "").toLowerCase() === "true") {
+        other++;
+      }
+    }
+
+    return { weekdayEvenings, weekendMornings, weekendEvenings, other };
+  }
+
+  function generateDonutSVG(percentage) {
+    const radius = 15.91549430918954; // circumference = 100
+    const filledCircumference = percentage;
+    const emptyCircumference = 100 - percentage;
+
+    return `
+      <circle cx="21" cy="21" r="${radius}" fill="transparent"
+              stroke="#e5e7eb" stroke-width="6"></circle>
+      <circle cx="21" cy="21" r="${radius}" fill="transparent"
+              stroke="#3b82f6" stroke-width="6"
+              stroke-dasharray="${filledCircumference} ${emptyCircumference}"
+              stroke-dashoffset="25"
+              transform="rotate(-90 21 21)"></circle>
+    `;
+  }
+
+  function updateWidgets() {
+    if (!rawRows || !geojson) return;
+
+    // Widget 1: Overall Feasibility
+    const burnout = calculateBurnout();
+
+    // Create explanation text (all in kids)
+    let explanationText = '';
+    if (burnout.deficit < 0) {
+      explanationText = `${Math.abs(burnout.deficit)} kids unserved`;
+    } else {
+      explanationText = `Can serve ${burnout.deficit} more kids`;
+    }
+
+    document.getElementById('burnout-value').textContent = burnout.deficit;
+    document.getElementById('burnout-value').className =
+      'widget-value ' + (burnout.deficit < 0 ? 'value-red' : 'value-green');
+    document.getElementById('burnout-capacity').textContent = `${burnout.capacity} kids (${burnout.leadCount} leads)`;
+    document.getElementById('burnout-demand').textContent = `${burnout.demand} kids`;
+    document.getElementById('burnout-label').textContent = explanationText;
+
+    // Progress bar visualization
+    const barWidth = burnout.demand > 0
+      ? Math.min((burnout.capacity / burnout.demand) * 100, 100)
+      : 0;
+    document.getElementById('burnout-bar').style.width = barWidth + '%';
+
+    // Change bar color based on surplus/deficit
+    const barColor = burnout.deficit >= 0
+      ? 'linear-gradient(90deg, #16a34a 0%, #86efac 100%)' // Green for surplus
+      : 'linear-gradient(90deg, #dc2626 0%, #fca5a5 100%)'; // Red for deficit
+    document.getElementById('burnout-bar').style.background = barColor;
+
+    // Widget 2: Hidden Generals
+    const generals = calculateHiddenGenerals();
+    document.getElementById('generals-value').textContent = generals;
+
+    // Widget 3: Regional Balance
+    const balance = calculateRegionalBalance();
+    const maxLeads = Math.max(balance.East, balance.West, balance.South, 1);
+
+    ['East', 'West', 'South'].forEach(region => {
+      const count = balance[region];
+      const barId = `balance-${region.toLowerCase()}-bar`;
+      const countId = `balance-${region.toLowerCase()}-count`;
+
+      document.getElementById(countId).textContent = count;
+      document.getElementById(barId).style.width = (count / maxLeads * 100) + '%';
+      document.getElementById(barId).style.background = getRegionColor(count);
+    });
+
+    // Widget 4: Orphan Count
+    const orphan = calculateOrphanCount();
+
+    document.getElementById('orphan-explore-students').textContent = orphan.explore.students;
+
+    document.getElementById('orphan-challenge-students').textContent = orphan.challenge.students;
+    document.getElementById('orphan-challenge-leads').textContent = orphan.challenge.leads;
+    document.getElementById('orphan-challenge-ratio').textContent = orphan.challenge.ratio;
+    document.getElementById('orphan-challenge-light').textContent =
+      orphan.challenge.status === 'green' ? '🟢' : '🟡';
+
+    document.getElementById('orphan-ftc-students').textContent = orphan.ftc.students;
+    document.getElementById('orphan-ftc-leads').textContent = orphan.ftc.leads;
+    document.getElementById('orphan-ftc-light').textContent =
+      orphan.ftc.status === 'green' ? '🟢' : '🔴';
+
+    // Widget 5: Timings Distribution
+    const timings = calculateTimingsDistribution();
+    const maxTiming = Math.max(timings.weekdayEvenings, timings.weekendMornings, timings.weekendEvenings, timings.other, 1);
+
+    document.getElementById('timing-weekday-count').textContent = timings.weekdayEvenings;
+    document.getElementById('timing-weekday-bar').style.width = (timings.weekdayEvenings / maxTiming * 100) + '%';
+
+    document.getElementById('timing-weekend-am-count').textContent = timings.weekendMornings;
+    document.getElementById('timing-weekend-am-bar').style.width = (timings.weekendMornings / maxTiming * 100) + '%';
+
+    document.getElementById('timing-weekend-pm-count').textContent = timings.weekendEvenings;
+    document.getElementById('timing-weekend-pm-bar').style.width = (timings.weekendEvenings / maxTiming * 100) + '%';
+
+    document.getElementById('timing-other-count').textContent = timings.other;
+    document.getElementById('timing-other-bar').style.width = (timings.other / maxTiming * 100) + '%';
+
+    // Show panel
+    document.getElementById('widgets-panel').style.display = 'block';
+  }
+
   function showClusters() {
     if (!geojson || !map) return;
 
     clearClusters();
 
-    const k = parseInt(document.getElementById('cluster-count').value) || 5;
+    const k = parseInt(document.getElementById('cluster-count').value) || 2;
     const points = geojson.features.map(f => ({
       lon: f.geometry.coordinates[0],
       lat: f.geometry.coordinates[1],
       kids: f.properties.kids,
-      leadVolunteerCount: f.properties.leadVolunteerCount
+      leadVolunteerCount: f.properties.leadVolunteerCount,
+      ages_summary: f.properties.ages_summary,
+      timings: f.properties.timings
     }));
 
     const { clusters } = kmeans(points, k);
@@ -701,7 +1550,9 @@
           pointCount: c.pointCount,
           totalKids: c.totalKids,
           leaders: c.leaders,
-          index: i + 1
+          index: i + 1,
+          agesSummary: c.agesSummary,
+          timings: c.timings
         }
       };
     });
@@ -715,7 +1566,9 @@
         pointCount: c.pointCount,
         totalKids: c.totalKids,
         leaders: c.leaders,
-        index: i + 1
+        index: i + 1,
+        agesSummary: c.agesSummary,
+        timings: c.timings
       }
     }));
 
@@ -745,6 +1598,20 @@
       }
     });
 
+    // Cluster centroid markers
+    map.addLayer({
+      id: 'cluster-centroids',
+      type: 'circle',
+      source: 'cluster-centers',
+      paint: {
+        'circle-radius': 8,
+        'circle-color': ['get', 'color'],
+        'circle-stroke-color': '#fff',
+        'circle-stroke-width': 2,
+        'circle-opacity': 0.9
+      }
+    });
+
     // Cluster labels at center
     map.addLayer({
       id: 'cluster-labels',
@@ -770,13 +1637,98 @@
       map.getCanvas().style.cursor = 'pointer';
       const f = e.features[0];
       const props = f.properties;
+      const capacity = props.leaders * 4; // Total kids that can be served
+      const feasibility = capacity - props.totalKids; // Surplus or deficit in kids
+      const feasibilityColor = feasibility >= 0 ? '#16a34a' : '#dc2626';
+
+      // Create explanation text (all in kids)
+      let feasibilityText = '';
+      if (feasibility < 0) {
+        feasibilityText = `${Math.abs(feasibility)} kids unserved`;
+      } else {
+        feasibilityText = `Can serve ${feasibility} more kids`;
+      }
+
+      // Build age distribution bar graph
+      const ages = JSON.parse(props.agesSummary || '{"6-8":0,"9-12":0,"13-17":0}');
+      const age6_8 = ages['6-8'] || 0;
+      const age9_12 = ages['9-12'] || 0;
+      const age13_17 = ages['13-17'] || 0;
+      const maxCount = Math.max(age6_8, age9_12, age13_17, 1);
+
+      const ageGraph = `
+        <div style="margin-top:8px">
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:40px;font-size:11px">6-8</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#f59e0b;height:100%;width:${(age6_8/maxCount)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${age6_8}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:40px;font-size:11px">9-12</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#3b82f6;height:100%;width:${(age9_12/maxCount)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${age9_12}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:40px;font-size:11px">13-17</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#8b5cf6;height:100%;width:${(age13_17/maxCount)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${age13_17}</span>
+          </div>
+        </div>`;
+
+      // Build timing distribution bar graph
+      const timings = JSON.parse(props.timings || '{"weekdayEvenings":0,"weekendMornings":0,"weekendEvenings":0,"other":0}');
+      const maxTiming = Math.max(timings.weekdayEvenings, timings.weekendMornings, timings.weekendEvenings, timings.other, 1);
+
+      const timingGraph = `
+        <div style="margin-top:8px">
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Weekday PM</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#f59e0b;height:100%;width:${(timings.weekdayEvenings/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.weekdayEvenings}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Weekend AM</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#3b82f6;height:100%;width:${(timings.weekendMornings/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.weekendMornings}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Weekend PM</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#8b5cf6;height:100%;width:${(timings.weekendEvenings/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.weekendEvenings}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:70px;font-size:11px">Other</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#10b981;height:100%;width:${(timings.other/maxTiming)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${timings.other}</span>
+          </div>
+        </div>`;
+
       clusterTooltip.setLngLat(e.lngLat).setHTML(`
         <div style="font-size:13px">
           <div><b>Cluster ${props.index}</b></div>
           <hr/>
           <div><b>Locations:</b> ${props.pointCount}</div>
           <div><b>Kids:</b> ${props.totalKids}</div>
-          <div><b>Leaders:</b> ${props.leaders}</div>
+          <div><b>Capacity:</b> ${capacity} kids (${props.leaders} leads)</div>
+          <div><b>Feasibility:</b> <span style="color:${feasibilityColor};font-weight:700">${feasibilityText}</span></div>
+          <div style="margin-top:4px"><b>Age Distribution:</b></div>
+          ${ageGraph}
+          <div style="margin-top:8px"><b>Availability:</b></div>
+          ${timingGraph}
         </div>
       `).addTo(map);
     });
@@ -790,6 +1742,7 @@
   function clearClusters() {
     if (!map) return;
     if (map.getLayer('cluster-labels')) map.removeLayer('cluster-labels');
+    if (map.getLayer('cluster-centroids')) map.removeLayer('cluster-centroids');
     if (map.getLayer('cluster-points')) map.removeLayer('cluster-points');
     if (map.getLayer('cluster-outlines')) map.removeLayer('cluster-outlines');
     if (map.getLayer('cluster-fills')) map.removeLayer('cluster-fills');
