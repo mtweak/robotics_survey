@@ -284,13 +284,48 @@
     .control-content.collapsed {
       max-height: 0 !important;
     }
+
+    /* Responsive layout for narrow screens */
+    @media (max-width: 900px) {
+      #controls-widget {
+        top: auto;
+        bottom: 10px;
+        right: 10px;
+        left: auto;
+        min-width: 280px;
+        max-width: calc(100vw - 20px);
+      }
+
+      #widgets-panel {
+        width: 280px;
+        max-width: calc(100vw - 20px);
+      }
+
+      #stats-box {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 600px) {
+      #widgets-panel {
+        width: calc(100vw - 20px);
+        max-height: 40vh;
+      }
+
+      #controls-widget {
+        width: calc(100vw - 20px);
+        min-width: auto;
+        max-height: 35vh;
+        overflow-y: auto;
+      }
+    }
   </style>
 </head>
 <body>
   <div id="map">
     <div id="widgets-panel" style="display:none">
       <div class="widget-header" onclick="toggleWidget('strategic-widgets')" style="margin-bottom: 12px;">
-        <div class="widget-title" style="font-size: 15px;">📊 Strategic Widgets</div>
+        <div class="widget-title" style="font-size: 15px;">📊 Analysis</div>
         <span class="widget-chevron collapsed" id="strategic-widgets-chevron">▼</span>
       </div>
       <div class="widget-content collapsed" id="strategic-widgets-content" style="max-height: 0">
