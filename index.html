@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Youth Robotics Interest Heatmap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #topbar {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e6e6e6;
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    }
+    #map { width: 100vw; height: calc(100vh - 62px); }
+    .small { color: #555; font-size: 12px; }
+    .pill { padding: 4px 8px; border: 1px solid #ddd; border-radius: 999px; font-size: 12px; }
+    .warn { color: #7a3; }
+    .err { color: #b00; }
+    #stats-box {
+      position: absolute;
+      bottom: 30px;
+      right: 10px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 1;
+      min-width: 180px;
+    }
+    #stats-box h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 6px;
+    }
+    #stats-box .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+    }
+    #stats-box .stat-label { color: #666; }
+    #stats-box .stat-value { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <div>
+      <div><b>Weighting</b></div>
+      <label class="pill"><input type="radio" name="weightMode" value="kids" checked /> # kids</label>
+      <label class="pill"><input type="radio" name="weightMode" value="households" /> households</label>
+      <label class="pill"><input type="radio" name="weightMode" value="kids_6_8" /> kids age 6–8</label>
+      <label class="pill"><input type="radio" name="weightMode" value="kids_9_12" /> kids age 9–12</label>
+      <label class="pill"><input type="radio" name="weightMode" value="kids_13_17" /> kids age 13–17</label>
+    </div>
+
+    <div id="status" class="small"></div>
+
+    <div>
+      <div><b>Clusters</b></div>
+      <input type="number" id="cluster-count" min="1" max="20" value="5" style="width:50px;padding:4px">
+      <button id="run-clusters" style="padding:4px 8px">Show Clusters</button>
+      <button id="clear-clusters" style="padding:4px 8px">Clear</button>
+    </div>
+  </div>
+
+  <div id="map">
+    <div id="stats-box" style="display:none">
+      <h3>📊 Statistics</h3>
+      <div class="stat-row"><span class="stat-label">Zip Codes</span><span class="stat-value" id="stat-zips">-</span></div>
+      <div class="stat-row"><span class="stat-label">Households</span><span class="stat-value" id="stat-households">-</span></div>
+      <div class="stat-row"><span class="stat-label">Total Kids</span><span class="stat-value" id="stat-kids">-</span></div>
+      <div class="stat-row"><span class="stat-label">Ages 6-8</span><span class="stat-value" id="stat-age-6-8">-</span></div>
+      <div class="stat-row"><span class="stat-label">Ages 9-12</span><span class="stat-value" id="stat-age-9-12">-</span></div>
+      <div class="stat-row"><span class="stat-label">Ages 13-17</span><span class="stat-value" id="stat-age-13-17">-</span></div>
+      <div class="stat-row"><span class="stat-label">Leaders</span><span class="stat-value" id="stat-leads">-</span></div>
+      <div class="stat-row"><span class="stat-label">General Support</span><span class="stat-value" id="stat-general">-</span></div>
+      <div class="stat-row"><span class="stat-label">Drop-off Only</span><span class="stat-value" id="stat-dropoff">-</span></div>
+      <h3 style="margin-top:10px">🤖 FLL Planning</h3>
+      <div class="stat-row"><span class="stat-label">Avg Kids/Household</span><span class="stat-value" id="stat-avg-kids">-</span></div>
+      <div class="stat-row"><span class="stat-label">Kids per Leader</span><span class="stat-value" id="stat-ratio">-</span></div>
+      <div class="stat-row"><span class="stat-label">Potential Teams</span><span class="stat-value" id="stat-teams">-</span></div>
+    </div>
+  </div>
+
+<script>
+  // Token injected server-side
+  const MAPBOX_TOKEN = '__MAPBOX_TOKEN__';
+
+  // ---- Helpers ----
+  function normalizeZip(z) {
+    if (!z) return null;
+    const s = String(z).trim();
+    const m = s.match(/\b(\d{5})(?:-\d{4})?\b/);
+    if (m) return { kind: "US", code: m[1] };
+    const c = s.toUpperCase().replace(/\s+/g, "");
+    if (/^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[ABCEGHJ-NPRSTV-Z]\d$/.test(c)) {
+      return { kind: "CA", code: c };
+    }
+    return null;
+  }
+
+  function extractAges(text) {
+    if (!text) return [];
+    const t = String(text);
+    const ages = [];
+    const re = /\b(\d{1,2})(?:\.(\d))?\b/g;
+    let m;
+    while ((m = re.exec(t)) !== null) {
+      const whole = parseInt(m[1], 10);
+      if (Number.isFinite(whole) && whole >= 1 && whole <= 17) ages.push(whole);
+    }
+    return ages;
+  }
+
+  function bucketCount(ages, lo, hi) {
+    return ages.filter(a => a >= lo && a <= hi).length;
+  }
+
+  function pickWeightMode() {
+    const r = document.querySelector('input[name="weightMode"]:checked');
+    return r ? r.value : "kids";
+  }
+
+  function setStatus(msg, cls="") {
+    const el = document.getElementById("status");
+    el.className = "small " + cls;
+    el.textContent = msg;
+  }
+
+  async function geocodePostcode(code, kind, token) {
+    const encoded = encodeURIComponent(code);
+    let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json?types=postcode&limit=1&access_token=${encodeURIComponent(token)}`;
+    if (kind === "US") url += "&country=us";
+    if (kind === "CA") url += "&country=ca";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Geocode failed for ${code}: ${res.status}`);
+    const data = await res.json();
+    const feat = data.features && data.features[0];
+    if (!feat || !feat.center) throw new Error(`No geocode result for ${code}`);
+    const [lon, lat] = feat.center;
+    return { lon, lat, place_name: feat.place_name };
+  }
+
+  // ---- Map globals ----
+  let map = null;
+  let geojson = null;
+
+  function initMap(token) {
+    mapboxgl.accessToken = token;
+    map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/light-v11",
+      center: [-83.2, 42.5],
+      zoom: 8
+    });
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
+  }
+
+  function addOrUpdateLayers() {
+    if (!map) return;
+
+    if (map.getSource("zips")) {
+      map.getSource("zips").setData(geojson);
+      return;
+    }
+
+    map.addSource("zips", { type: "geojson", data: geojson });
+
+    map.addLayer({
+      id: "heat",
+      type: "heatmap",
+      source: "zips",
+      maxzoom: 12,
+      paint: {
+        "heatmap-weight": ["interpolate", ["linear"], ["get", "weight"], 0, 0, 10, 1],
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.8, 8, 1.2, 12, 2.0],
+        "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 10, 8, 25, 12, 45],
+        "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0.9, 12, 0.2]
+      }
+    });
+
+    map.addLayer({
+      id: "points",
+      type: "circle",
+      source: "zips",
+      minzoom: 10,
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3, 14, 8],
+        "circle-opacity": 0.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-opacity": 0.7
+      }
+    });
+
+    // Invisible layer for hover detection at all zoom levels
+    map.addLayer({
+      id: "points-hover",
+      type: "circle",
+      source: "zips",
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 15, 8, 30, 12, 50],
+        "circle-opacity": 0
+      }
+    });
+
+    // Lead Volunteer badge background - subtle
+    map.addLayer({
+      id: "lead-volunteers-bg",
+      type: "circle",
+      source: "zips",
+      filter: [">", ["get", "leadVolunteerCount"], 0],
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 6, 12, 9],
+        "circle-color": "#fff",
+        "circle-stroke-color": "#065f46",
+        "circle-stroke-width": 0.5,
+        "circle-opacity": 0.7
+      }
+    });
+
+    // Lead Volunteer count number
+    map.addLayer({
+      id: "lead-volunteers-count",
+      type: "symbol",
+      source: "zips",
+      filter: [">", ["get", "leadVolunteerCount"], 0],
+      layout: {
+        "text-field": ["to-string", ["get", "leadVolunteerCount"]],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 6, 9, 12, 12],
+        "text-allow-overlap": true,
+        "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"]
+      },
+      paint: {
+        "text-color": "#065f46",
+        "text-opacity": 0.8
+      }
+    });
+
+    // Tooltip for hover
+    const tooltip = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false
+    });
+
+    map.on("mousemove", "points-hover", (e) => {
+      const f = e.features && e.features[0];
+      if (!f) return;
+      map.getCanvas().style.cursor = "pointer";
+      const props = f.properties || {};
+      const leadCount = props.leadVolunteerCount || 0;
+      const leadBadge = leadCount > 0
+        ? `<div style="color:#065f46;font-weight:bold">🎖️ ${leadCount} Leader${leadCount > 1 ? 's' : ''}</div>`
+        : '';
+
+      // Build age distribution bar graph
+      const ages = (props.ages_summary || "")
+        .split(",").map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n));
+      const age6_8 = ages.filter(a => a >= 6 && a <= 8).length;
+      const age9_12 = ages.filter(a => a >= 9 && a <= 12).length;
+      const age13_17 = ages.filter(a => a >= 13 && a <= 17).length;
+      const maxCount = Math.max(age6_8, age9_12, age13_17, 1);
+
+      const barGraph = `
+        <div style="margin-top:4px">
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:40px;font-size:11px">6-8</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#f59e0b;height:100%;width:${(age6_8/maxCount)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${age6_8}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:40px;font-size:11px">9-12</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#3b82f6;height:100%;width:${(age9_12/maxCount)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${age9_12}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+            <span style="width:40px;font-size:11px">13-17</span>
+            <div style="background:#e5e7eb;height:12px;flex:1;border-radius:2px">
+              <div style="background:#8b5cf6;height:100%;width:${(age13_17/maxCount)*100}%;border-radius:2px"></div>
+            </div>
+            <span style="width:16px;font-size:11px;text-align:right">${age13_17}</span>
+          </div>
+        </div>`;
+
+      const html =
+        `<div style="font-size:13px;min-width:160px">
+          <div><b>${props.postcode}</b></div>
+          <div>${props.place_name || ""}</div>
+          ${leadBadge}
+          <hr/>
+          <div><b>Weight:</b> ${props.weight}</div>
+          <div><b>Households:</b> ${props.households}</div>
+          <div><b>Kids:</b> ${props.kids}</div>
+          <div style="margin-top:4px"><b>Age Distribution:</b></div>
+          ${barGraph}
+        </div>`;
+      tooltip.setLngLat(e.lngLat).setHTML(html).addTo(map);
+    });
+
+    map.on("mouseleave", "points-hover", () => {
+      map.getCanvas().style.cursor = "";
+      tooltip.remove();
+    });
+  }
+
+  function fitToData() {
+    if (!geojson || !geojson.features || geojson.features.length === 0) return;
+    let minLon = 180, minLat = 90, maxLon = -180, maxLat = -90;
+    for (const f of geojson.features) {
+      const [lon, lat] = f.geometry.coordinates;
+      minLon = Math.min(minLon, lon); minLat = Math.min(minLat, lat);
+      maxLon = Math.max(maxLon, lon); maxLat = Math.max(maxLat, lat);
+    }
+    map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 40, duration: 500 });
+  }
+
+  // ---- Main build ----
+  async function buildMap() {
+    if (!MAPBOX_TOKEN || MAPBOX_TOKEN.includes('MAPBOX_TOKEN')) {
+      setStatus("Mapbox token not configured.", "err");
+      return;
+    }
+
+    setStatus("Loading dashboard.csv…");
+
+    let csvText;
+    try {
+      const response = await fetch('dashboard.csv');
+      if (!response.ok) {
+        setStatus(`Failed to load dashboard.csv: ${response.status}`, "err");
+        return;
+      }
+      csvText = await response.text();
+    } catch (err) {
+      setStatus(`Error loading dashboard.csv: ${err.message}`, "err");
+      return;
+    }
+
+    setStatus("Parsing CSV…");
+
+    const parsed = await new Promise((resolve, reject) => {
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (r) => resolve(r),
+        error: (e) => reject(e)
+      });
+    });
+
+    if (parsed.errors && parsed.errors.length) {
+      console.warn(parsed.errors);
+    }
+
+    const rows = parsed.data || [];
+    if (!rows.length) { setStatus("No rows found in CSV.", "err"); return; }
+
+    const colZip = Object.keys(rows[0]).find(k => /zip\s*code/i.test(k));
+    const colKids = Object.keys(rows[0]).find(k => /(ages|genders).*children/i.test(k) || /future engineers/i.test(k));
+    const colVolunteer = Object.keys(rows[0]).find(k => /community cooperative/i.test(k));
+
+    if (!colZip) { setStatus("Could not find ZIP column in CSV headers.", "err"); return; }
+    if (!colKids) { setStatus("Could not find kids/ages column in CSV headers.", "err"); return; }
+
+    const agg = new Map();
+    let badZip = 0;
+
+    for (const r of rows) {
+      const nz = normalizeZip(r[colZip]);
+      if (!nz) { badZip++; continue; }
+
+      const ages = extractAges(r[colKids]);
+      const kids = ages.length;
+
+      const key = `${nz.kind}:${nz.code}`;
+      if (!agg.has(key)) agg.set(key, { kind: nz.kind, code: nz.code, households: 0, kids: 0, ages: [] });
+
+      const a = agg.get(key);
+      a.households += 1;
+      a.kids += kids;
+      a.ages.push(...ages);
+
+      // Count volunteer types
+      if (colVolunteer) {
+        const volVal = (r[colVolunteer] || "").toString().trim().toLowerCase();
+        if (volVal.startsWith("lead volunteer") || volVal.startsWith("head coach")) {
+          a.leadVolunteerCount = (a.leadVolunteerCount || 0) + 1;
+        } else if (volVal.startsWith("general support")) {
+          a.generalSupportCount = (a.generalSupportCount || 0) + 1;
+        } else if (volVal.startsWith("drop-off") || volVal.startsWith("drop off")) {
+          a.dropoffCount = (a.dropoffCount || 0) + 1;
+        }
+      }
+    }
+
+    if (agg.size === 0) {
+      setStatus(`No usable ZIP/postal codes found. Bad/empty: ${badZip}`, "err");
+      return;
+    }
+
+    setStatus(`Found ${agg.size} unique postcodes. Geocoding…`);
+
+    if (!map) initMap(MAPBOX_TOKEN);
+
+    const entries = Array.from(agg.entries()).map(([key, v]) => ({ key, ...v }));
+    const results = [];
+    const concurrency = 6;
+    let idx = 0;
+    let done = 0;
+    const failures = [];
+
+    async function worker() {
+      while (idx < entries.length) {
+        const i = idx++;
+        const e = entries[i];
+        try {
+          const geo = await geocodePostcode(e.code, e.kind, MAPBOX_TOKEN);
+          results.push({ ...e, ...geo });
+        } catch (err) {
+          failures.push({ e, err: String(err) });
+        } finally {
+          done++;
+          if (done % 5 === 0 || done === entries.length) {
+            setStatus(`Geocoding… ${done}/${entries.length} done. Failures: ${failures.length}`);
+          }
+        }
+      }
+    }
+
+    await Promise.all(Array.from({length: Math.min(concurrency, entries.length)}, worker));
+
+    if (results.length === 0) {
+      setStatus(`Geocoding failed for all postcodes. Check token + Mapbox access.`, "err");
+      console.error(failures);
+      return;
+    }
+
+    const weightMode = pickWeightMode();
+
+    geojson = {
+      type: "FeatureCollection",
+      features: results.map(r => {
+        const ages = r.ages || [];
+        let weight = r.kids;
+
+        if (weightMode === "households") weight = r.households;
+        if (weightMode === "kids_6_8") weight = bucketCount(ages, 6, 8);
+        if (weightMode === "kids_9_12") weight = bucketCount(ages, 9, 12);
+        if (weightMode === "kids_13_17") weight = bucketCount(ages, 13, 17);
+
+        const agesSummary = ages.length ? ages.sort((a,b)=>a-b).join(", ") : "";
+        return {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [r.lon, r.lat] },
+          properties: {
+            postcode: r.code,
+            country: r.kind,
+            place_name: r.place_name || "",
+            households: r.households,
+            kids: r.kids,
+            weight: weight,
+            ages_summary: agesSummary,
+            leadVolunteerCount: r.leadVolunteerCount || 0
+          }
+        };
+      })
+    };
+
+    if (!map.isStyleLoaded()) {
+      map.once("load", () => {
+        addOrUpdateLayers();
+        fitToData();
+      });
+    } else {
+      addOrUpdateLayers();
+      fitToData();
+    }
+
+    const modeLabel = {
+      kids: "# kids",
+      households: "households",
+      kids_6_8: "kids 6–8",
+      kids_9_12: "kids 9–12",
+      kids_13_17: "kids 13–17"
+    }[weightMode] || weightMode;
+
+    setStatus(`Map built. Weighted by ${modeLabel}. Geocoded: ${results.length}/${entries.length}. Failures: ${failures.length}`);
+
+    // Update statistics box
+    let totalHouseholds = 0, totalKids = 0, totalLeads = 0;
+    let totalGeneral = 0, totalDropoff = 0;
+    let age6_8 = 0, age9_12 = 0, age13_17 = 0;
+    for (const r of results) {
+      totalHouseholds += r.households;
+      totalKids += r.kids;
+      totalLeads += r.leadVolunteerCount || 0;
+      totalGeneral += r.generalSupportCount || 0;
+      totalDropoff += r.dropoffCount || 0;
+      for (const a of (r.ages || [])) {
+        if (a >= 6 && a <= 8) age6_8++;
+        else if (a >= 9 && a <= 12) age9_12++;
+        else if (a >= 13 && a <= 17) age13_17++;
+      }
+    }
+
+    // FLL teams typically 4-6 kids, need 2 coaches per team
+    const avgKidsPerHousehold = totalHouseholds > 0 ? (totalKids / totalHouseholds).toFixed(1) : 0;
+    const kidsPerLeader = totalLeads > 0 ? (totalKids / totalLeads).toFixed(1) : '∞';
+    const fllTeamSize = 6;
+    const potentialTeams = Math.floor(totalKids / fllTeamSize);
+
+    document.getElementById('stat-zips').textContent = results.length;
+    document.getElementById('stat-households').textContent = totalHouseholds;
+    document.getElementById('stat-kids').textContent = totalKids;
+    document.getElementById('stat-age-6-8').textContent = age6_8;
+    document.getElementById('stat-age-9-12').textContent = age9_12;
+    document.getElementById('stat-age-13-17').textContent = age13_17;
+    document.getElementById('stat-leads').textContent = totalLeads;
+    document.getElementById('stat-general').textContent = totalGeneral;
+    document.getElementById('stat-dropoff').textContent = totalDropoff;
+    document.getElementById('stat-avg-kids').textContent = avgKidsPerHousehold;
+    document.getElementById('stat-ratio').textContent = kidsPerLeader;
+    document.getElementById('stat-teams').textContent = potentialTeams;
+    document.getElementById('stats-box').style.display = 'block';
+
+    if (failures.length) console.warn("Geocode failures:", failures);
+  }
+
+  // Rebuild weights instantly when toggling modes (no re-geocode)
+  document.querySelectorAll('input[name="weightMode"]').forEach(el => {
+    el.addEventListener("change", () => {
+      if (!geojson) return;
+      const mode = pickWeightMode();
+      for (const f of geojson.features) {
+        const ages = (f.properties.ages_summary || "")
+          .split(",").map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n));
+        const kids = f.properties.kids;
+        const households = f.properties.households;
+        let weight = kids;
+        if (mode === "households") weight = households;
+        if (mode === "kids_6_8") weight = bucketCount(ages, 6, 8);
+        if (mode === "kids_9_12") weight = bucketCount(ages, 9, 12);
+        if (mode === "kids_13_17") weight = bucketCount(ages, 13, 17);
+        f.properties.weight = weight;
+      }
+      addOrUpdateLayers();
+      setStatus(`Updated weighting: ${mode}`);
+    });
+  });
+
+  // K-means clustering
+  function kmeans(points, k, maxIterations = 50) {
+    if (points.length === 0 || k <= 0) return { clusters: [], assignments: [] };
+
+    // Initialize centroids randomly from points
+    const centroids = [];
+    const used = new Set();
+    while (centroids.length < Math.min(k, points.length)) {
+      const idx = Math.floor(Math.random() * points.length);
+      if (!used.has(idx)) {
+        used.add(idx);
+        centroids.push({ lon: points[idx].lon, lat: points[idx].lat });
+      }
+    }
+
+    let assignments = [];
+    for (let iter = 0; iter < maxIterations; iter++) {
+      // Assign points to nearest centroid
+      assignments = points.map(p => {
+        let minDist = Infinity, closest = 0;
+        centroids.forEach((c, i) => {
+          const d = Math.pow(p.lon - c.lon, 2) + Math.pow(p.lat - c.lat, 2);
+          if (d < minDist) { minDist = d; closest = i; }
+        });
+        return closest;
+      });
+
+      // Update centroids
+      const newCentroids = centroids.map(() => ({ sumLon: 0, sumLat: 0, count: 0 }));
+      points.forEach((p, i) => {
+        const c = assignments[i];
+        newCentroids[c].sumLon += p.lon;
+        newCentroids[c].sumLat += p.lat;
+        newCentroids[c].count++;
+      });
+
+      let converged = true;
+      newCentroids.forEach((nc, i) => {
+        if (nc.count > 0) {
+          const newLon = nc.sumLon / nc.count;
+          const newLat = nc.sumLat / nc.count;
+          if (Math.abs(centroids[i].lon - newLon) > 0.0001 || Math.abs(centroids[i].lat - newLat) > 0.0001) {
+            converged = false;
+          }
+          centroids[i].lon = newLon;
+          centroids[i].lat = newLat;
+        }
+      });
+
+      if (converged) break;
+    }
+
+    // Build cluster data with convex hulls
+    const clusters = centroids.map((c, i) => {
+      const clusterPoints = points.filter((_, pi) => assignments[pi] === i);
+      return {
+        center: [c.lon, c.lat],
+        points: clusterPoints,
+        pointCount: clusterPoints.length,
+        totalKids: clusterPoints.reduce((sum, p) => sum + (p.kids || 0), 0),
+        leaders: clusterPoints.reduce((sum, p) => sum + (p.leadVolunteerCount || 0), 0)
+      };
+    });
+
+    return { clusters: clusters.filter(c => c.pointCount > 0), assignments };
+  }
+
+  // Convex hull using Graham scan
+  function convexHull(points) {
+    if (points.length < 3) return points.map(p => [p.lon, p.lat]);
+
+    const pts = points.map(p => ({ x: p.lon, y: p.lat }));
+
+    // Find lowest point (bottom-most, then left-most)
+    let lowest = 0;
+    for (let i = 1; i < pts.length; i++) {
+      if (pts[i].y < pts[lowest].y || (pts[i].y === pts[lowest].y && pts[i].x < pts[lowest].x)) {
+        lowest = i;
+      }
+    }
+    [pts[0], pts[lowest]] = [pts[lowest], pts[0]];
+
+    const pivot = pts[0];
+
+    // Cross product for turning direction
+    function cross(o, a, b) {
+      return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    }
+
+    // Sort remaining points by polar angle with respect to pivot
+    const sorted = [pivot].concat(
+      pts.slice(1).sort((a, b) => {
+        const angleA = Math.atan2(a.y - pivot.y, a.x - pivot.x);
+        const angleB = Math.atan2(b.y - pivot.y, b.x - pivot.x);
+        if (Math.abs(angleA - angleB) > 0.000001) return angleA - angleB;
+        // If same angle, closer point first
+        const distA = Math.pow(a.x - pivot.x, 2) + Math.pow(a.y - pivot.y, 2);
+        const distB = Math.pow(b.x - pivot.x, 2) + Math.pow(b.y - pivot.y, 2);
+        return distA - distB;
+      })
+    );
+
+    // Graham scan
+    const hull = [sorted[0]];
+    for (let i = 1; i < sorted.length; i++) {
+      while (hull.length > 1 && cross(hull[hull.length - 2], hull[hull.length - 1], sorted[i]) <= 0) {
+        hull.pop();
+      }
+      hull.push(sorted[i]);
+    }
+
+    return hull.map(p => [p.x, p.y]);
+  }
+
+  const clusterColors = ['#e63946','#2a9d8f','#e9c46a','#264653','#f4a261','#8338ec','#06d6a0','#118ab2','#ef476f','#ffd166'];
+
+  function showClusters() {
+    if (!geojson || !map) return;
+
+    clearClusters();
+
+    const k = parseInt(document.getElementById('cluster-count').value) || 5;
+    const points = geojson.features.map(f => ({
+      lon: f.geometry.coordinates[0],
+      lat: f.geometry.coordinates[1],
+      kids: f.properties.kids,
+      leadVolunteerCount: f.properties.leadVolunteerCount
+    }));
+
+    const { clusters } = kmeans(points, k);
+
+    // Create GeoJSON for cluster convex hull polygons
+    const hullFeatures = clusters.map((c, i) => {
+      const hull = convexHull(c.points);
+      if (hull.length > 0) hull.push(hull[0]); // close polygon
+
+      return {
+        type: 'Feature',
+        geometry: {
+          type: hull.length >= 4 ? 'Polygon' : 'Point',
+          coordinates: hull.length >= 4 ? [hull] : c.center
+        },
+        properties: {
+          color: clusterColors[i % clusterColors.length],
+          pointCount: c.pointCount,
+          totalKids: c.totalKids,
+          leaders: c.leaders,
+          index: i + 1
+        }
+      };
+    });
+
+    // Cluster centers for labels
+    const centerFeatures = clusters.map((c, i) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: c.center },
+      properties: {
+        color: clusterColors[i % clusterColors.length],
+        pointCount: c.pointCount,
+        totalKids: c.totalKids,
+        leaders: c.leaders,
+        index: i + 1
+      }
+    }));
+
+    map.addSource('clusters', { type: 'geojson', data: { type: 'FeatureCollection', features: hullFeatures } });
+    map.addSource('cluster-centers', { type: 'geojson', data: { type: 'FeatureCollection', features: centerFeatures } });
+
+    // Cluster polygon fills
+    map.addLayer({
+      id: 'cluster-fills',
+      type: 'fill',
+      source: 'clusters',
+      paint: {
+        'fill-color': ['get', 'color'],
+        'fill-opacity': 0.2
+      }
+    }, 'heat');
+
+    // Cluster polygon outlines
+    map.addLayer({
+      id: 'cluster-outlines',
+      type: 'line',
+      source: 'clusters',
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': 2,
+        'line-opacity': 0.9
+      }
+    });
+
+    // Cluster labels at center
+    map.addLayer({
+      id: 'cluster-labels',
+      type: 'symbol',
+      source: 'cluster-centers',
+      layout: {
+        'text-field': ['concat', 'C', ['to-string', ['get', 'index']]],
+        'text-size': 16,
+        'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+        'text-allow-overlap': true
+      },
+      paint: {
+        'text-color': ['get', 'color'],
+        'text-halo-color': '#fff',
+        'text-halo-width': 2
+      }
+    });
+
+    // Cluster tooltips
+    const clusterTooltip = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
+
+    map.on('mouseenter', 'cluster-fills', (e) => {
+      map.getCanvas().style.cursor = 'pointer';
+      const f = e.features[0];
+      const props = f.properties;
+      clusterTooltip.setLngLat(e.lngLat).setHTML(`
+        <div style="font-size:13px">
+          <div><b>Cluster ${props.index}</b></div>
+          <hr/>
+          <div><b>Locations:</b> ${props.pointCount}</div>
+          <div><b>Kids:</b> ${props.totalKids}</div>
+          <div><b>Leaders:</b> ${props.leaders}</div>
+        </div>
+      `).addTo(map);
+    });
+
+    map.on('mouseleave', 'cluster-fills', () => {
+      map.getCanvas().style.cursor = '';
+      clusterTooltip.remove();
+    });
+  }
+
+  function clearClusters() {
+    if (!map) return;
+    if (map.getLayer('cluster-labels')) map.removeLayer('cluster-labels');
+    if (map.getLayer('cluster-points')) map.removeLayer('cluster-points');
+    if (map.getLayer('cluster-outlines')) map.removeLayer('cluster-outlines');
+    if (map.getLayer('cluster-fills')) map.removeLayer('cluster-fills');
+    if (map.getSource('cluster-centers')) map.removeSource('cluster-centers');
+    if (map.getSource('cluster-points')) map.removeSource('cluster-points');
+    if (map.getSource('clusters')) map.removeSource('clusters');
+  }
+
+  document.getElementById('run-clusters').addEventListener('click', showClusters);
+  document.getElementById('clear-clusters').addEventListener('click', clearClusters);
+
+  // Auto-build on page load
+  buildMap();
+</script>
+</body>
+</html>
