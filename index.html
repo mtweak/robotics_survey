@@ -28,6 +28,10 @@
       min-width: 300px;
       max-width: 500px;
     }
+    #controls-widget > .widget-header {
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 12px;
+    }
     #controls-widget .control-section {
       margin-bottom: 16px;
     }
@@ -94,6 +98,10 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.18);
       z-index: 1;
       font-size: 13px;
+    }
+    #widgets-panel > .widget-header {
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 12px;
     }
     .widget {
       margin-bottom: 20px;
@@ -242,28 +250,67 @@
       color: #6b7280;
       margin-top: 2px;
     }
+
+    /* Collapsible widgets */
+    .widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .widget-header:hover {
+      opacity: 0.8;
+    }
+    .widget-chevron {
+      font-size: 14px;
+      transition: transform 0.2s ease;
+      margin-left: 8px;
+    }
+    .widget-chevron.collapsed {
+      transform: rotate(-90deg);
+    }
+    .widget-content {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .widget-content.collapsed {
+      max-height: 0 !important;
+    }
+    .control-content {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .control-content.collapsed {
+      max-height: 0 !important;
+    }
   </style>
 </head>
 <body>
   <div id="map">
     <div id="widgets-panel" style="display:none">
-      <!-- Widget 1: Overall Feasibility -->
-      <div class="widget" id="widget-burnout">
-        <div class="widget-title">⚠️ Overall Feasibility</div>
-        <div class="widget-value" id="burnout-value">-</div>
-        <div class="widget-subtitle">Lead surplus/deficit (4 kids per team)</div>
-
-        <div class="progress-container" style="margin-top:12px">
-          <div class="progress-bar" id="burnout-bar"
-               style="background: linear-gradient(90deg, #dc2626 0%, #fca5a5 100%)"></div>
-          <div class="progress-label" id="burnout-label">-</div>
-        </div>
-
-        <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px">
-          <span style="color:#16a34a">Capacity: <b id="burnout-capacity">-</b></span>
-          <span style="color:#dc2626">Demand: <b id="burnout-demand">-</b></span>
-        </div>
+      <div class="widget-header" onclick="toggleWidget('strategic-widgets')" style="margin-bottom: 12px;">
+        <div class="widget-title" style="font-size: 15px;">📊 Strategic Widgets</div>
+        <span class="widget-chevron collapsed" id="strategic-widgets-chevron">▼</span>
       </div>
+      <div class="widget-content collapsed" id="strategic-widgets-content" style="max-height: 0">
+        <!-- Widget 1: Feasibility Analysis -->
+        <div class="widget" id="widget-burnout">
+          <div class="widget-title">⚠️ Feasibility Analysis</div>
+          <div class="widget-value" id="burnout-value">-</div>
+          <div class="widget-subtitle">Lead surplus/deficit (4 kids per team)</div>
+
+          <div class="progress-container" style="margin-top:12px">
+            <div class="progress-bar" id="burnout-bar"
+                 style="background: linear-gradient(90deg, #dc2626 0%, #fca5a5 100%)"></div>
+            <div class="progress-label" id="burnout-label">-</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px">
+            <span style="color:#16a34a">Capacity: <b id="burnout-capacity">-</b></span>
+            <span style="color:#dc2626">Demand: <b id="burnout-demand">-</b></span>
+          </div>
+        </div>
 
       <!-- Widget 2: Hidden Generals -->
       <div class="widget" id="widget-generals">
@@ -377,28 +424,35 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
 
     <div id="controls-widget" style="display:none">
-      <div class="control-section">
-        <div class="control-title">🎛️ Weighting</div>
-        <div class="control-options">
-          <label class="pill"><input type="radio" name="weightMode" value="kids" checked /> # kids</label>
-          <label class="pill"><input type="radio" name="weightMode" value="households" /> households</label>
-          <label class="pill"><input type="radio" name="weightMode" value="kids_6_8" /> kids age 6–8</label>
-          <label class="pill"><input type="radio" name="weightMode" value="kids_9_12" /> kids age 9–12</label>
-          <label class="pill"><input type="radio" name="weightMode" value="kids_13_17" /> kids age 13–17</label>
-        </div>
+      <div class="widget-header" onclick="toggleControl('controls')" style="margin-bottom: 12px; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px;">
+        <div class="control-title" style="font-size: 15px; font-weight: 600;">🎛️ Controls</div>
+        <span class="widget-chevron collapsed" id="controls-chevron">▼</span>
       </div>
+      <div class="control-content collapsed" id="controls-content" style="max-height: 0">
+        <div class="control-section">
+          <div class="control-title">Weighting</div>
+          <div class="control-options">
+            <label class="pill"><input type="radio" name="weightMode" value="kids" checked /> # kids</label>
+            <label class="pill"><input type="radio" name="weightMode" value="households" /> households</label>
+            <label class="pill"><input type="radio" name="weightMode" value="kids_6_8" /> kids age 6–8</label>
+            <label class="pill"><input type="radio" name="weightMode" value="kids_9_12" /> kids age 9–12</label>
+            <label class="pill"><input type="radio" name="weightMode" value="kids_13_17" /> kids age 13–17</label>
+          </div>
+        </div>
 
-      <div id="status"></div>
+        <div id="status"></div>
 
-      <div class="control-section">
-        <div class="control-title">🗂️ Clusters</div>
-        <div class="control-options">
-          <input type="number" id="cluster-count" min="1" max="20" value="2" style="width:50px;padding:4px;border:1px solid #ddd;border-radius:4px">
-          <button id="run-clusters" style="padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:12px">Show Clusters</button>
-          <button id="clear-clusters" style="padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:12px">Clear</button>
+        <div class="control-section">
+          <div class="control-title">🗂️ Clusters</div>
+          <div class="control-options">
+            <input type="number" id="cluster-count" min="1" max="20" value="2" style="width:50px;padding:4px;border:1px solid #ddd;border-radius:4px">
+            <button id="run-clusters" style="padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:12px">Show Clusters</button>
+            <button id="clear-clusters" style="padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:12px">Clear</button>
+          </div>
         </div>
       </div>
     </div>
@@ -915,10 +969,14 @@
       map.once("load", () => {
         addOrUpdateLayers();
         fitToData();
+        // Show clusters by default after layers are loaded
+        setTimeout(() => showClusters(), 100);
       });
     } else {
       addOrUpdateLayers();
       fitToData();
+      // Show clusters by default after layers are loaded
+      setTimeout(() => showClusters(), 100);
     }
 
     const modeLabel = {
@@ -1615,18 +1673,18 @@
     map.addSource('clusters', { type: 'geojson', data: { type: 'FeatureCollection', features: hullFeatures } });
     map.addSource('cluster-centers', { type: 'geojson', data: { type: 'FeatureCollection', features: centerFeatures } });
 
-    // Cluster polygon fills
+    // Cluster polygon fills - added before 'heat' layer to ensure they're below heatmap
     map.addLayer({
       id: 'cluster-fills',
       type: 'fill',
       source: 'clusters',
       paint: {
         'fill-color': ['get', 'color'],
-        'fill-opacity': 0.2
+        'fill-opacity': 0.15
       }
     }, 'heat');
 
-    // Cluster polygon outlines
+    // Cluster polygon outlines - also before 'heat' layer
     map.addLayer({
       id: 'cluster-outlines',
       type: 'line',
@@ -1636,9 +1694,9 @@
         'line-width': 2,
         'line-opacity': 0.9
       }
-    });
+    }, 'heat');
 
-    // Cluster centroid markers
+    // Cluster centroid markers - don't add beforeLayer so they appear on top
     map.addLayer({
       id: 'cluster-centroids',
       type: 'circle',
@@ -1652,7 +1710,7 @@
       }
     });
 
-    // Cluster labels at center
+    // Cluster labels at center - appear on top for visibility
     map.addLayer({
       id: 'cluster-labels',
       type: 'symbol',
@@ -1793,6 +1851,37 @@
 
   document.getElementById('run-clusters').addEventListener('click', showClusters);
   document.getElementById('clear-clusters').addEventListener('click', clearClusters);
+
+  // Widget and control toggle functions
+  function toggleWidget(id) {
+    const content = document.getElementById(id + '-content');
+    const chevron = document.getElementById(id + '-chevron');
+
+    if (content.classList.contains('collapsed')) {
+      content.style.maxHeight = content.scrollHeight + 'px';
+      content.classList.remove('collapsed');
+      chevron.classList.remove('collapsed');
+    } else {
+      content.style.maxHeight = '0';
+      content.classList.add('collapsed');
+      chevron.classList.add('collapsed');
+    }
+  }
+
+  function toggleControl(id) {
+    const content = document.getElementById(id + '-content');
+    const chevron = document.getElementById(id + '-chevron');
+
+    if (content.classList.contains('collapsed')) {
+      content.style.maxHeight = content.scrollHeight + 'px';
+      content.classList.remove('collapsed');
+      chevron.classList.remove('collapsed');
+    } else {
+      content.style.maxHeight = '0';
+      content.classList.add('collapsed');
+      chevron.classList.add('collapsed');
+    }
+  }
 
   // Auto-build on page load
   buildMap();
