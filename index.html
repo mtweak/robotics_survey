@@ -9,16 +9,51 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    #topbar {
-      padding: 12px 14px;
-      border-bottom: 1px solid #e6e6e6;
-      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-    }
-    #map { width: 100vw; height: calc(100vh - 62px); }
+    #map { width: 100vw; height: 100vh; }
     .small { color: #555; font-size: 12px; }
     .pill { padding: 4px 8px; border: 1px solid #ddd; border-radius: 999px; font-size: 12px; }
     .warn { color: #7a3; }
     .err { color: #b00; }
+    /* Controls Widget */
+    #controls-widget {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.97);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      z-index: 1;
+      font-size: 13px;
+      min-width: 300px;
+      max-width: 500px;
+    }
+    #controls-widget .control-section {
+      margin-bottom: 16px;
+    }
+    #controls-widget .control-section:last-child {
+      margin-bottom: 0;
+    }
+    #controls-widget .control-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1f2937;
+    }
+    #controls-widget .control-options {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    #controls-widget #status {
+      color: #6b7280;
+      font-size: 11px;
+      padding: 8px 0;
+      border-top: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
     #stats-box {
       position: absolute;
       bottom: 30px;
@@ -210,26 +245,6 @@
   </style>
 </head>
 <body>
-  <div id="topbar">
-    <div>
-      <div><b>Weighting</b></div>
-      <label class="pill"><input type="radio" name="weightMode" value="kids" checked /> # kids</label>
-      <label class="pill"><input type="radio" name="weightMode" value="households" /> households</label>
-      <label class="pill"><input type="radio" name="weightMode" value="kids_6_8" /> kids age 6–8</label>
-      <label class="pill"><input type="radio" name="weightMode" value="kids_9_12" /> kids age 9–12</label>
-      <label class="pill"><input type="radio" name="weightMode" value="kids_13_17" /> kids age 13–17</label>
-    </div>
-
-    <div id="status" class="small"></div>
-
-    <div>
-      <div><b>Clusters</b></div>
-      <input type="number" id="cluster-count" min="1" max="20" value="2" style="width:50px;padding:4px">
-      <button id="run-clusters" style="padding:4px 8px">Show Clusters</button>
-      <button id="clear-clusters" style="padding:4px 8px">Clear</button>
-    </div>
-  </div>
-
   <div id="map">
     <div id="widgets-panel" style="display:none">
       <!-- Widget 1: Overall Feasibility -->
@@ -360,6 +375,30 @@
             </div>
             <div class="bar-count" id="timing-other-count">-</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls-widget" style="display:none">
+      <div class="control-section">
+        <div class="control-title">🎛️ Weighting</div>
+        <div class="control-options">
+          <label class="pill"><input type="radio" name="weightMode" value="kids" checked /> # kids</label>
+          <label class="pill"><input type="radio" name="weightMode" value="households" /> households</label>
+          <label class="pill"><input type="radio" name="weightMode" value="kids_6_8" /> kids age 6–8</label>
+          <label class="pill"><input type="radio" name="weightMode" value="kids_9_12" /> kids age 9–12</label>
+          <label class="pill"><input type="radio" name="weightMode" value="kids_13_17" /> kids age 13–17</label>
+        </div>
+      </div>
+
+      <div id="status"></div>
+
+      <div class="control-section">
+        <div class="control-title">🗂️ Clusters</div>
+        <div class="control-options">
+          <input type="number" id="cluster-count" min="1" max="20" value="2" style="width:50px;padding:4px;border:1px solid #ddd;border-radius:4px">
+          <button id="run-clusters" style="padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:12px">Show Clusters</button>
+          <button id="clear-clusters" style="padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:12px">Clear</button>
         </div>
       </div>
     </div>
@@ -928,6 +967,7 @@
     document.getElementById('stat-ratio').textContent = kidsPerLeader;
     document.getElementById('stat-teams').textContent = potentialTeams;
     document.getElementById('stats-box').style.display = 'block';
+    document.getElementById('controls-widget').style.display = 'block';
 
     // Update widgets panel
     updateWidgets();
